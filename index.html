@@ -36,6 +36,18 @@
     .badge-active{background:rgba(74,222,128,.15);color:#4ade80}
     .badge-done{background:rgba(148,163,184,.12);color:#94a3b8}
     .badge-viewer{background:rgba(99,102,241,.15);color:#a5b4fc}
+
+    /* PENALTY */
+    .penalty-banner{background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.35);border-radius:16px;padding:14px 16px;margin-bottom:14px}
+    .penalty-banner-title{font-size:13px;font-weight:900;color:#fca5a5;margin-bottom:8px;display:flex;align-items:center;gap:6px}
+    .penalty-item{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:13px;padding:6px 0}
+    .penalty-item+.penalty-item{border-top:1px solid rgba(239,68,68,.2)}
+    .btn-forgive{background:rgba(74,222,128,.15);border:1px solid rgba(74,222,128,.3);border-radius:10px;color:#4ade80;font-size:12px;font-weight:700;padding:6px 12px;cursor:pointer;font-family:inherit;flex-shrink:0;white-space:nowrap}
+    .btn-forgive:hover{background:rgba(74,222,128,.25)}
+    .btn-pts-boom{width:100%;margin-top:8px;border:2px solid rgba(239,68,68,.3);border-radius:14px;background:rgba(239,68,68,.08);color:#fca5a5;padding:13px 8px;cursor:pointer;font-family:inherit;font-size:13px;font-weight:900;transition:all .15s;display:flex;flex-direction:column;align-items:center;gap:3px}
+    .btn-pts-boom:hover{background:rgba(239,68,68,.15)}
+    .btn-pts-boom.sel{border-color:#ef4444;background:rgba(239,68,68,.22);color:#fff}
+    .boom-sub{font-size:11px;font-weight:500;opacity:.75}
     .comp-bottom{display:flex;align-items:center;justify-content:space-between}
     .comp-players{display:flex;gap:4px}
     .comp-prog{font-size:12px;color:#94a3b8}
@@ -208,6 +220,7 @@
   </div>
   <button class="btn-add-game" id="openWizardBtn" style="display:none">+ הזן תוצאת משחק</button>
   <button class="btn-share-big" id="shareBtn" onclick="shareComp()">🔗 שתף עם חברים</button>
+  <div id="penaltyBanner" style="display:none"></div>
   <div class="standings">
     <div class="standings-title">🏆 טבלת דירוג</div>
     <table>
@@ -259,6 +272,10 @@
           <button class="btn-pts" id="pts2" onclick="selPts(2)"><span class="pts-num">2</span><span class="pts-name">מרס</span></button>
           <button class="btn-pts" id="pts3" onclick="selPts(3)"><span class="pts-num">3</span><span class="pts-name">מרס טורקי</span></button>
         </div>
+        <button class="btn-pts-boom" id="pts4" onclick="selPts(4)">
+          💥 פיצוץ משחק — 4 נקודות
+          <span class="boom-sub">השחקן השני מושעה עד להתנצלות פומבית</span>
+        </button>
       </div>
       <button class="btn-confirm" id="confirmBtn" onclick="confirmGame()" disabled>✓ אשר</button>
       <button class="btn-back-wiz" onclick="goWizS1()">← חזור</button>
@@ -509,7 +526,7 @@ function updateSetupMeta(){
 }
 function startComp(){
   const goal=document.getElementById('goalInput').value.trim();
-  const comp={id:Date.now().toString(),goal,players:[...setupPlayers],gpm:setupGpm,results:{},createdAt:Date.now()};
+  const comp={id:Date.now().toString(),goal,players:[...setupPlayers],gpm:setupGpm,results:{},penalties:[],createdAt:Date.now()};
   const comps=loadComps();comps.push(comp);saveComps(comps);
   fbPush(comp);
   C=comp; isAdmin=true;
@@ -556,6 +573,27 @@ function renderGame(){
     if(isAdmin)document.getElementById('openWizardBtn').style.display='none';
   }else{banner.style.display='none';}
 
+  // ── PENALTY BANNER ──
+  const penalties=C.penalties||[];
+  const pb=document.getElementById('penaltyBanner');
+  if(penalties.length){
+    pb.style.display='block';
+    pb.innerHTML=`<div class="penalty-banner">
+      <div class="penalty-banner-title">🚫 השחקנים הבאים מושעים עד להתנצלות פומבית</div>
+      ${penalties.map(pen=>`
+        <div class="penalty-item">
+          <div style="display:flex;align-items:center;gap:8px;flex:1;min-width:0">
+            ${av(pen.player)} <span><strong>${pen.player}</strong> פיצץ משחק נגד <strong>${pen.by}</strong></span>
+          </div>
+          ${isAdmin?`<button class="btn-forgive" onclick="clearPenalty('${esc(pen.player)}')">✅ התנצל</button>`:''}
+        </div>`).join('')}
+    </div>`;
+    if(isAdmin)document.getElementById('openWizardBtn').style.display='none';
+  }else{
+    pb.style.display='none';
+    if(isAdmin&&!allDone)document.getElementById('openWizardBtn').style.display='flex';
+  }
+
   const ms=getMatchups(C.players);
   document.getElementById('matchupList').innerHTML=ms.map(([p1,p2])=>{
     const games=C.results[p1+'__'+p2]||[];
@@ -564,12 +602,13 @@ function renderGame(){
     const rem=C.gpm-games.length;
     const done=rem===0;
     const hist=games.map((g,idx)=>{
-      const lbl=g.p===1?'+1':g.p===2?'מרס':'מרס טורקי';
+      const lbl=g.p===1?'+1':g.p===2?'מרס':g.p===3?'מרס טורקי':'💥 פיצוץ';
       const clr=g.w===p1?'#a78bfa':'#34d399';
       const editBtn=isAdmin?`<button onclick="editGame('${esc(p1)}','${esc(p2)}',${idx})" style="background:none;border:none;color:#64748b;cursor:pointer;font-size:12px;padding:0;line-height:1" title="ערוך">✏️</button><button onclick="deleteGame('${esc(p1)}','${esc(p2)}',${idx})" style="background:none;border:none;color:#64748b;cursor:pointer;font-size:12px;padding:0;line-height:1" title="מחק">🗑️</button>`:'';
       return`<span style="display:inline-flex;align-items:center;gap:3px;background:rgba(255,255,255,.07);border-radius:8px;padding:3px 7px;font-size:11px;color:${clr}">${g.w} ${lbl}${editBtn}</span>`;
     }).join('');
-    const quickBtn=isAdmin&&!done?`<button onclick="quickAdd('${esc(p1)}','${esc(p2)}')" style="width:100%;background:rgba(255,255,255,.06);border:1px dashed rgba(255,255,255,.2);border-radius:10px;color:#94a3b8;font-size:13px;font-weight:700;padding:8px;cursor:pointer;font-family:inherit;margin-top:2px">+ הזן תוצאה</button>`:'';
+    const hasPenalty=(C.penalties||[]).length>0;
+    const quickBtn=isAdmin&&!done&&!hasPenalty?`<button onclick="quickAdd('${esc(p1)}','${esc(p2)}')" style="width:100%;background:rgba(255,255,255,.06);border:1px dashed rgba(255,255,255,.2);border-radius:10px;color:#94a3b8;font-size:13px;font-weight:700;padding:8px;cursor:pointer;font-family:inherit;margin-top:2px">+ הזן תוצאה</button>`:'';
     return`<div class="matchup-card">
       <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
         <div class="mc-players">
@@ -643,7 +682,7 @@ function selectMatchup(p1,p2){
   document.getElementById('nameP2').textContent=p2;
   document.getElementById('btnP1').classList.remove('sel');
   document.getElementById('btnP2').classList.remove('sel');
-  [1,2,3].forEach(n=>document.getElementById('pts'+n).classList.remove('sel'));
+  [1,2,3,4].forEach(n=>document.getElementById('pts'+n).classList.remove('sel'));
   document.getElementById('confirmBtn').disabled=true;
 }
 function selWinner(idx){
@@ -654,7 +693,7 @@ function selWinner(idx){
 }
 function selPts(n){
   wiz.pts=n;
-  [1,2,3].forEach(i=>document.getElementById('pts'+i).classList.toggle('sel',i===n));
+  [1,2,3,4].forEach(i=>document.getElementById('pts'+i).classList.toggle('sel',i===n));
   chkConfirm();
 }
 function chkConfirm(){document.getElementById('confirmBtn').disabled=!(wiz.winner&&wiz.pts);}
@@ -663,7 +702,20 @@ function confirmGame(){
   if(!C.results[key])C.results[key]=[];
   if(wiz.editMode){C.results[key][wiz.editIdx]={w:wiz.winner,p:wiz.pts};}
   else{C.results[key].push({w:wiz.winner,p:wiz.pts});}
+  // פיצוץ — הפסדן מקבל עונש
+  if(wiz.pts===4&&!wiz.editMode){
+    const loser=wiz.winner===wiz.p1?wiz.p2:wiz.p1;
+    if(!C.penalties)C.penalties=[];
+    C.penalties=C.penalties.filter(pen=>pen.player!==loser);
+    C.penalties.push({player:loser,by:wiz.winner,at:Date.now()});
+  }
   saveC(); closeWizard(); renderGame();
+}
+function clearPenalty(playerName){
+  if(!C.penalties)return;
+  C.penalties=C.penalties.filter(pen=>pen.player!==playerName);
+  saveC(); renderGame();
+  showToast('✅ '+playerName+' התנצל — חוזר למשחק!');
 }
 
 // ── INIT ──
