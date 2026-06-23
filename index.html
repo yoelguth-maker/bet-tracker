@@ -212,7 +212,7 @@
     <table>
       <thead><tr>
         <th style="width:34px">#</th><th>שחקן</th>
-        <th style="text-align:center">נקודות</th><th style="text-align:center">ניצח</th>
+        <th style="text-align:center">נקודות</th><th style="text-align:center">ניצח</th><th style="text-align:center">משחקים</th>
       </tr></thead>
       <tbody id="standingsBody"></tbody>
     </table>
@@ -347,11 +347,15 @@ function totalPlayed(){return Object.values(C.results).reduce((s,g)=>s+g.length,
 function totalGames(){return getMatchups(C.players).length*C.gpm;}
 function getStandings(){
   const st={};
-  C.players.forEach(p=>{st[p]={pts:0,wins:0};});
+  C.players.forEach(p=>{st[p]={pts:0,wins:0,played:0};});
   getMatchups(C.players).forEach(([p1,p2])=>{
-    (C.results[p1+'__'+p2]||[]).forEach(g=>{st[g.w].pts+=g.p;st[g.w].wins++;});
+    const games=C.results[p1+'__'+p2]||[];
+    games.forEach(g=>{st[g.w].pts+=g.p;st[g.w].wins++;});
+    st[p1].played+=games.length;
+    st[p2].played+=games.length;
   });
-  return C.players.map(p=>({name:p,...st[p]})).sort((a,b)=>b.pts-a.pts||b.wins-a.wins);
+  const totalPerPlayer=(C.players.length-1)*C.gpm;
+  return C.players.map(p=>({name:p,...st[p],total:totalPerPlayer})).sort((a,b)=>b.pts-a.pts||b.wins-a.wins);
 }
 function showToast(msg){
   const t=document.getElementById('toast');
@@ -528,6 +532,7 @@ function renderGame(){
       <td>${av(s.name)} ${s.name}</td>
       <td class="pts-td">${s.pts}</td>
       <td class="wins-td">${s.wins}</td>
+      <td style="text-align:center;font-size:12px;color:#94a3b8">${s.played}/${s.total}</td>
     </tr>`).join('');
 
   const allDone=played===total&&total>0;
