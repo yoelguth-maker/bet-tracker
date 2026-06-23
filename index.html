@@ -575,6 +575,7 @@ function renderGame(){
 
   // ── PENALTY BANNER ──
   const penalties=C.penalties||[];
+  const penalizedSet=new Set(penalties.map(p=>p.player));
   const pb=document.getElementById('penaltyBanner');
   if(penalties.length){
     pb.style.display='block';
@@ -588,11 +589,12 @@ function renderGame(){
           ${isAdmin?`<button class="btn-forgive" onclick="clearPenalty('${esc(pen.player)}')">✅ התנצל</button>`:''}
         </div>`).join('')}
     </div>`;
-    if(isAdmin)document.getElementById('openWizardBtn').style.display='none';
   }else{
     pb.style.display='none';
-    if(isAdmin&&!allDone)document.getElementById('openWizardBtn').style.display='flex';
   }
+  // כפתור הוסף — מציג תמיד, האשף מנהל אילו עימותים חסומים
+  if(isAdmin&&!allDone) document.getElementById('openWizardBtn').style.display='flex';
+  else if(allDone) document.getElementById('openWizardBtn').style.display='none';
 
   const ms=getMatchups(C.players);
   document.getElementById('matchupList').innerHTML=ms.map(([p1,p2])=>{
@@ -607,8 +609,10 @@ function renderGame(){
       const editBtn=isAdmin?`<button onclick="editGame('${esc(p1)}','${esc(p2)}',${idx})" style="background:none;border:none;color:#64748b;cursor:pointer;font-size:12px;padding:0;line-height:1" title="ערוך">✏️</button><button onclick="deleteGame('${esc(p1)}','${esc(p2)}',${idx})" style="background:none;border:none;color:#64748b;cursor:pointer;font-size:12px;padding:0;line-height:1" title="מחק">🗑️</button>`:'';
       return`<span style="display:inline-flex;align-items:center;gap:3px;background:rgba(255,255,255,.07);border-radius:8px;padding:3px 7px;font-size:11px;color:${clr}">${g.w} ${lbl}${editBtn}</span>`;
     }).join('');
-    const hasPenalty=(C.penalties||[]).length>0;
-    const quickBtn=isAdmin&&!done&&!hasPenalty?`<button onclick="quickAdd('${esc(p1)}','${esc(p2)}')" style="width:100%;background:rgba(255,255,255,.06);border:1px dashed rgba(255,255,255,.2);border-radius:10px;color:#94a3b8;font-size:13px;font-weight:700;padding:8px;cursor:pointer;font-family:inherit;margin-top:2px">+ הזן תוצאה</button>`:'';
+    const matchupBlocked=penalizedSet.has(p1)||penalizedSet.has(p2);
+    const quickBtn=isAdmin&&!done&&!matchupBlocked?`<button onclick="quickAdd('${esc(p1)}','${esc(p2)}')" style="width:100%;background:rgba(255,255,255,.06);border:1px dashed rgba(255,255,255,.2);border-radius:10px;color:#94a3b8;font-size:13px;font-weight:700;padding:8px;cursor:pointer;font-family:inherit;margin-top:2px">+ הזן תוצאה</button>`
+      :isAdmin&&!done&&matchupBlocked?`<div style="text-align:center;font-size:12px;color:#f87171;padding:6px">🚫 חסום — ממתין להתנצלות</div>`
+      :'';
     return`<div class="matchup-card">
       <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
         <div class="mc-players">
@@ -660,11 +664,13 @@ function goWizS1(){
   document.getElementById('wiz-s1').style.display='block';
   document.getElementById('wiz-s2').style.display='none';
   wiz.winner=null;wiz.pts=null;
+  const wizPenalizedSet=new Set((C.penalties||[]).map(p=>p.player));
   document.getElementById('matchupBtns').innerHTML=getMatchups(C.players).map(([p1,p2])=>{
     const rem=remaining(p1,p2),done=rem===0;
-    return`<button class="mu-btn" ${done?'disabled':''} onclick="selectMatchup('${esc(p1)}','${esc(p2)}')">
+    const blocked=wizPenalizedSet.has(p1)||wizPenalizedSet.has(p2);
+    return`<button class="mu-btn" ${done||blocked?'disabled':''} onclick="selectMatchup('${esc(p1)}','${esc(p2)}')">
       <div class="mu-left">${av(p1,24)} ${p1} <span style="color:#64748b;font-size:12px">נגד</span> ${av(p2,24)} ${p2}</div>
-      <span class="rem-badge ${done?'rem-done':''}">${done?'✓ הסתיים':'נשאר '+rem}</span>
+      <span class="rem-badge ${done?'rem-done':''}">${done?'✓ הסתיים':blocked?'🚫 מושעה':'נשאר '+rem}</span>
     </button>`;
   }).join('');
 }
