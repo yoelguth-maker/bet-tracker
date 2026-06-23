@@ -1,4 +1,4 @@
-const CACHE = 'bet-tracker-v1';
+const CACHE = 'bet-tracker-v2';
 const FILES = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', e => {
