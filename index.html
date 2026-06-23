@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>🎯 התערבות בין חברים</title>
+  <link rel="manifest" href="manifest.json"/>
+  <meta name="theme-color" content="#7c3aed"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+  <meta name="apple-mobile-web-app-title" content="התערבות"/>
+  <link rel="apple-touch-icon" href="icon-192.png"/>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#0f172a 0%,#1e0a3c 50%,#0f172a 100%);min-height:100vh;color:#fff;direction:rtl}
+    .screen{display:none;max-width:500px;margin:0 auto;padding:20px 20px 40px}
+    .screen.active{display:block}
+    .topbar{display:flex;align-items:center;gap:10px;margin-bottom:20px;padding-top:12px}
+    .btn-back{background:none;border:none;color:#94a3b8;font-size:22px;cursor:pointer;padding:4px;line-height:1}
+    .btn-back:hover{color:#fff}
+    .topbar h2{font-size:17px;font-weight:900;flex:1;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+
+    /* HOME */
+    .home-logo{text-align:center;padding:36px 0 24px}
+    .home-logo .em{font-size:52px}
+    .home-logo h1{font-size:24px;font-weight:900;margin-top:8px}
+    .home-logo p{color:#94a3b8;font-size:13px;margin-top:3px}
+    .btn-new{width:100%;background:linear-gradient(135deg,#7c3aed,#db2777);border:none;border-radius:16px;color:#fff;font-size:17px;font-weight:900;padding:15px;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:20px}
+    .btn-new:hover{opacity:.9}
+    .section-title{font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px}
+    .comp-card{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:16px;padding:14px 16px;margin-bottom:10px;cursor:pointer;transition:background .15s;position:relative}
+    .comp-card:hover{background:rgba(255,255,255,.1)}
+    .comp-top{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:10px}
+    .comp-goal{font-size:15px;font-weight:700;line-height:1.3;flex:1}
+    .badge{font-size:11px;font-weight:700;padding:3px 9px;border-radius:99px;flex-shrink:0}
+    .badge-active{background:rgba(74,222,128,.15);color:#4ade80}
+    .badge-done{background:rgba(148,163,184,.12);color:#94a3b8}
+    .comp-bottom{display:flex;align-items:center;justify-content:space-between}
+    .comp-players{display:flex;gap:4px}
+    .comp-prog{font-size:12px;color:#94a3b8}
+    .comp-actions{display:flex;gap:6px;margin-top:10px;border-top:1px solid rgba(255,255,255,.07);padding-top:10px}
+    .btn-share-sm{flex:1;background:rgba(99,102,241,.15);border:1px solid rgba(99,102,241,.3);border-radius:10px;color:#a5b4fc;font-size:12px;font-weight:700;padding:7px;cursor:pointer;font-family:inherit}
+    .btn-share-sm:hover{background:rgba(99,102,241,.25)}
+    .btn-del-sm{flex:1;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.2);border-radius:10px;color:#fca5a5;font-size:12px;font-weight:700;padding:7px;cursor:pointer;font-family:inherit}
+    .btn-del-sm:hover{background:rgba(239,68,68,.2)}
+    .empty-state{text-align:center;padding:40px 20px;color:#475569}
+    .empty-state .em{font-size:40px;margin-bottom:10px}
+
+    /* VIEW BADGE */
+    .view-badge{background:rgba(99,102,241,.2);border:1px solid rgba(99,102,241,.4);border-radius:10px;padding:6px 14px;font-size:12px;font-weight:700;color:#a5b4fc;text-align:center;margin-bottom:14px}
+
+    /* SETUP */
+    .card{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:16px;padding:18px;margin-bottom:12px}
+    .card-label{font-size:13px;font-weight:700;margin-bottom:10px;color:#e2e8f0;display:block}
+    textarea,input[type=text]{width:100%;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:11px 13px;color:#fff;font-size:14px;font-family:inherit;outline:none;direction:rtl}
+    textarea{resize:none}
+    textarea:focus,input:focus{border-color:#a855f7}
+    .player-row{display:flex;gap:8px;margin-bottom:10px}
+    .player-row input{flex:1}
+    .btn-add{background:#7c3aed;border:none;border-radius:12px;color:#fff;font-size:22px;width:44px;cursor:pointer}
+    .btn-add:hover{background:#6d28d9}
+    .chips{display:flex;flex-wrap:wrap;gap:8px}
+    .chip{display:flex;align-items:center;gap:6px;border-radius:999px;padding:4px 12px;font-size:13px;font-weight:600;color:#fff}
+    .chip button{background:none;border:none;color:#fff;cursor:pointer;font-size:16px;opacity:.8}
+    .chip button:hover{opacity:1}
+    .counter-row{display:flex;align-items:center;gap:16px}
+    .btn-count{width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,.1);border:none;color:#fff;font-size:22px;cursor:pointer}
+    .btn-count:hover{background:rgba(255,255,255,.2)}
+    .count-num{font-size:38px;font-weight:900;width:50px;text-align:center}
+    .count-info{color:#94a3b8;font-size:12px;margin-top:8px}
+    .btn-start{width:100%;background:linear-gradient(135deg,#7c3aed,#db2777);border:none;border-radius:16px;color:#fff;font-size:18px;font-weight:900;padding:15px;cursor:pointer;margin-top:4px;font-family:inherit}
+    .btn-start:disabled{opacity:.4;cursor:not-allowed}
+    .hint{text-align:center;color:#64748b;font-size:12px;margin-top:8px}
+
+    /* PLAYING */
+    .prog-wrap{margin-bottom:14px}
+    .prog-labels{display:flex;justify-content:space-between;font-size:11px;color:#94a3b8;margin-bottom:5px}
+    .prog-bar{height:8px;background:rgba(255,255,255,.1);border-radius:99px;overflow:hidden}
+    .prog-fill{height:100%;background:linear-gradient(90deg,#7c3aed,#db2777);border-radius:99px;transition:width .4s}
+    .btn-add-game{width:100%;background:linear-gradient(135deg,#7c3aed,#db2777);border:none;border-radius:16px;color:#fff;font-size:17px;font-weight:900;padding:15px;cursor:pointer;margin-bottom:14px;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:8px}
+    .btn-add-game:hover{opacity:.9}
+    .btn-share-big{width:100%;background:rgba(99,102,241,.15);border:1px solid rgba(99,102,241,.3);border-radius:14px;color:#a5b4fc;font-size:14px;font-weight:700;padding:12px;cursor:pointer;margin-bottom:14px;font-family:inherit}
+    .btn-share-big:hover{background:rgba(99,102,241,.25)}
+
+    /* Standings */
+    .standings{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:16px;margin-bottom:14px;overflow:hidden}
+    .standings-title{padding:11px 16px;border-bottom:1px solid rgba(255,255,255,.08);font-size:13px;font-weight:700}
+    table{width:100%;border-collapse:collapse;font-size:13px}
+    th{color:#64748b;font-size:11px;padding:7px 14px;text-align:right;font-weight:600}
+    tr+tr td{border-top:1px solid rgba(255,255,255,.05)}
+    td{padding:9px 14px}
+    .tr-top{background:rgba(234,179,8,.05)}
+    .av{width:28px;height:28px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;color:#fff;vertical-align:middle;margin-left:8px}
+    .pts-td{color:#a78bfa;font-weight:700;font-size:15px;text-align:center}
+    .wins-td{color:#34d399;font-size:12px;text-align:center}
+    .winner-banner{background:linear-gradient(135deg,rgba(217,119,6,.3),rgba(234,88,12,.3));border:1px solid rgba(234,179,8,.4);border-radius:16px;padding:20px;text-align:center;margin-bottom:14px}
+    .winner-banner .trophy{font-size:46px;margin-bottom:5px}
+    .winner-banner h3{color:#fde68a;font-size:19px}
+    .winner-banner p{color:#fbbf24;font-size:13px;margin-top:3px}
+    .matchup-card{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:12px 14px;margin-bottom:8px;display:flex;flex-direction:column;gap:8px}
+    .mc-players{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:700}
+    .mc-score-num{font-weight:900;font-size:16px}
+    .mc-left{font-size:11px;color:#64748b}
+    .mc-done{font-size:11px;color:#4ade80}
+
+    /* WIZARD */
+    .overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);backdrop-filter:blur(4px);z-index:100;display:flex;align-items:flex-end;justify-content:center}
+    .modal{background:#1e1b4b;border-radius:20px 20px 0 0;width:100%;max-width:500px;padding:24px 20px 32px;max-height:90vh;overflow-y:auto}
+    .modal-title{font-size:17px;font-weight:900;margin-bottom:18px;display:flex;align-items:center;justify-content:space-between}
+    .btn-close{background:none;border:none;color:#64748b;font-size:24px;cursor:pointer;line-height:1}
+    .btn-close:hover{color:#fff}
+    .mu-btn{width:100%;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:14px;color:#fff;padding:14px 16px;cursor:pointer;font-size:14px;font-weight:700;display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;font-family:inherit;transition:background .15s}
+    .mu-btn:hover:not(:disabled){background:rgba(255,255,255,.12)}
+    .mu-btn:disabled{opacity:.35;cursor:not-allowed}
+    .mu-left{display:flex;align-items:center;gap:8px}
+    .rem-badge{font-size:12px;font-weight:600;color:#94a3b8;background:rgba(255,255,255,.08);padding:3px 9px;border-radius:99px}
+    .rem-done{color:#4ade80}
+    .step2-hdr{font-size:13px;color:#94a3b8;margin-bottom:14px;text-align:center}
+    .winner-btns{display:flex;gap:10px}
+    .btn-winner{flex:1;border:2px solid rgba(255,255,255,.15);border-radius:16px;background:rgba(255,255,255,.06);color:#fff;padding:20px 10px;cursor:pointer;font-size:15px;font-weight:900;font-family:inherit;display:flex;flex-direction:column;align-items:center;gap:10px;transition:all .15s}
+    .btn-winner:hover{background:rgba(255,255,255,.12)}
+    .btn-winner.sel{border-color:#a855f7;background:rgba(168,85,247,.15)}
+    .av-lg{width:46px;height:46px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:900;color:#fff}
+    .pts-section{margin-top:16px}
+    .pts-label{font-size:13px;color:#94a3b8;margin-bottom:10px;text-align:center}
+    .pts-btns{display:flex;gap:8px}
+    .btn-pts{flex:1;border:2px solid rgba(255,255,255,.12);border-radius:14px;background:rgba(255,255,255,.05);color:#fff;padding:14px 8px;cursor:pointer;font-family:inherit;display:flex;flex-direction:column;align-items:center;gap:4px;transition:all .15s}
+    .btn-pts:hover{background:rgba(255,255,255,.1)}
+    .btn-pts.sel{border-color:#a855f7;background:rgba(168,85,247,.15)}
+    .pts-num{font-size:24px;font-weight:900;color:#a78bfa}
+    .pts-name{font-size:11px;color:#94a3b8;font-weight:600}
+    .btn-confirm{width:100%;background:linear-gradient(135deg,#7c3aed,#db2777);border:none;border-radius:14px;color:#fff;font-size:16px;font-weight:900;padding:15px;cursor:pointer;margin-top:18px;font-family:inherit}
+    .btn-confirm:disabled{opacity:.35;cursor:not-allowed}
+    .btn-back-wiz{width:100%;background:none;border:1px solid rgba(255,255,255,.1);border-radius:14px;color:#94a3b8;font-size:14px;padding:11px;cursor:pointer;margin-top:8px;font-family:inherit}
+    .btn-back-wiz:hover{color:#fff}
+
+    /* TOAST */
+    .toast{position:fixed;bottom:30px;left:50%;transform:translateX(-50%) translateY(20px);background:#312e81;border:1px solid #4f46e5;border-radius:12px;padding:12px 20px;font-size:14px;font-weight:700;color:#a5b4fc;opacity:0;transition:all .3s;z-index:200;white-space:nowrap}
+    .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+    /* LOADER */
+    .loader{text-align:center;padding:60px 20px;color:#64748b;font-size:14px}
+
+    .c0{background:#3b82f6}.c1{background:#a855f7}.c2{background:#10b981}
+    .c3{background:#f97316}.c4{background:#ec4899}.c5{background:#06b6d4}
+    .c6{background:#eab308}.c7{background:#ef4444}
+  </style>
+</head>
+<body>
+
+<!-- HOME -->
+<div id="screen-home" class="screen">
+  <div class="home-logo">
+    <div class="em">🎯</div>
+    <h1>התערבות בין חברים</h1>
+    <p>בחר תחרות או צור חדשה</p>
+  </div>
+  <button class="btn-new" onclick="goSetup()">＋ תחרות חדשה</button>
+  <div class="section-title">תחרויות שמורות</div>
+  <div id="compsList"></div>
+</div>
+
+<!-- SETUP -->
+<div id="screen-setup" class="screen">
+  <div class="topbar">
+    <button class="btn-back" onclick="goHome()">←</button>
+    <h2>תחרות חדשה</h2>
+  </div>
+  <div class="card">
+    <span class="card-label">🏆 מה ההימור?</span>
+    <textarea id="goalInput" rows="2" placeholder="למשל: המפסיד שוטף את החדר"></textarea>
+  </div>
+  <div class="card">
+    <span class="card-label">👥 משתתפים (<span id="playerCount">0</span>)</span>
+    <div class="player-row">
+      <input type="text" id="playerInput" placeholder="שם שחקן..."/>
+      <button class="btn-add" id="addBtn">+</button>
+    </div>
+    <div class="chips" id="chips"></div>
+  </div>
+  <div class="card">
+    <span class="card-label">🎮 כמה משחקים כל אחד מול כל אחד?</span>
+    <div class="counter-row">
+      <button class="btn-count" id="gpmMinus">−</button>
+      <div class="count-num" id="gpmDisplay">5</div>
+      <button class="btn-count" id="gpmPlus">+</button>
+    </div>
+    <div class="count-info" id="countInfo"></div>
+  </div>
+  <button class="btn-start" id="startBtn" disabled>יאללה נתחיל! 🚀</button>
+  <div class="hint" id="startHint">צריך לפחות 2 שחקנים</div>
+</div>
+
+<!-- PLAYING -->
+<div id="screen-playing" class="screen">
+  <div class="topbar">
+    <button class="btn-back" onclick="goHome()">←</button>
+    <div style="flex:1;min-width:0">
+      <h2 id="playGoal"></h2>
+      <small id="playMeta" style="color:#94a3b8;font-size:11px"></small>
+    </div>
+  </div>
+  <div id="viewBadge" class="view-badge" style="display:none">👁️ מצב צפייה — רק האדמין יכול לערוך</div>
+  <div class="prog-wrap">
+    <div class="prog-labels"><span id="progText"></span><span id="progPct"></span></div>
+    <div class="prog-bar"><div class="prog-fill" id="progFill" style="width:0%"></div></div>
+  </div>
+  <button class="btn-add-game" id="openWizardBtn" style="display:none">+ הזן תוצאת משחק</button>
+  <button class="btn-share-big" id="shareBtn" onclick="shareComp()">🔗 שתף עם חברים</button>
+  <div class="standings">
+    <div class="standings-title">🏆 טבלת דירוג</div>
+    <table>
+      <thead><tr>
+        <th style="width:34px">#</th><th>שחקן</th>
+        <th style="text-align:center">נקודות</th><th style="text-align:center">ניצח</th>
+      </tr></thead>
+      <tbody id="standingsBody"></tbody>
+    </table>
+  </div>
+  <div id="winnerBanner" style="display:none" class="winner-banner">
+    <div class="trophy">🏆</div>
+    <h3 id="winnerText"></h3>
+    <p id="winnerSub"></p>
+  </div>
+  <div id="matchupList"></div>
+</div>
+
+<!-- WIZARD -->
+<div id="wizardOverlay" class="overlay" style="display:none" onclick="overlayClick(event)">
+  <div class="modal">
+    <div id="wiz-s1">
+      <div class="modal-title">
+        <span>📋 בחר עימות</span>
+        <button class="btn-close" onclick="closeWizard()">×</button>
+      </div>
+      <div id="matchupBtns"></div>
+    </div>
+    <div id="wiz-s2" style="display:none">
+      <div class="modal-title">
+        <span id="s2Title"></span>
+        <button class="btn-close" onclick="closeWizard()">×</button>
+      </div>
+      <div class="step2-hdr">מי ניצח?</div>
+      <div class="winner-btns">
+        <button class="btn-winner" id="btnP1" onclick="selWinner(0)">
+          <div class="av-lg" id="avP1"></div>
+          <span id="nameP1"></span>
+        </button>
+        <button class="btn-winner" id="btnP2" onclick="selWinner(1)">
+          <div class="av-lg" id="avP2"></div>
+          <span id="nameP2"></span>
+        </button>
+      </div>
+      <div class="pts-section">
+        <div class="pts-label">כמה נקודות?</div>
+        <div class="pts-btns">
+          <button class="btn-pts" id="pts1" onclick="selPts(1)"><span class="pts-num">1</span><span class="pts-name">רגיל</span></button>
+          <button class="btn-pts" id="pts2" onclick="selPts(2)"><span class="pts-num">2</span><span class="pts-name">מרס</span></button>
+          <button class="btn-pts" id="pts3" onclick="selPts(3)"><span class="pts-num">3</span><span class="pts-name">מרס טורקי</span></button>
+        </div>
+      </div>
+      <button class="btn-confirm" id="confirmBtn" onclick="confirmGame()" disabled>✓ אשר</button>
+      <button class="btn-back-wiz" onclick="goWizS1()">← חזור</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── PWA Service Worker ──
+if('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js');
+
+// ── FIREBASE ──
+const FB_CFG = {
+  apiKey:      "AIzaSyBGTCyECgAvI0sUy009hAgJZhMqKypcxos",
+  authDomain:  "amirant-duel.firebaseapp.com",
+  databaseURL: "https://amirant-duel-default-rtdb.firebaseio.com",
+  storageBucket:"amirant-duel.firebasestorage.app"
+};
+const FB_PATH = 'bet-comps';
+
+let fbDb = null;
+function loadFB(){
+  return new Promise(res=>{
+    if(fbDb){res();return;}
+    const s1=document.createElement('script');
+    s1.src='https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js';
+    s1.onload=()=>{
+      const s2=document.createElement('script');
+      s2.src='https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js';
+      s2.onload=()=>{
+        if(!firebase.apps.length) firebase.initializeApp(FB_CFG);
+        fbDb=firebase.database();
+        res();
+      };
+      document.head.appendChild(s2);
+    };
+    document.head.appendChild(s1);
+  });
+}
+
+function fbPush(comp){
+  loadFB().then(()=>fbDb.ref(FB_PATH+'/'+comp.id).set(comp)).catch(()=>{});
+}
+function fbGet(id,cb){
+  loadFB().then(()=>fbDb.ref(FB_PATH+'/'+id).once('value',snap=>cb(snap.val()))).catch(()=>cb(null));
+}
+function fbListen(id,cb){
+  loadFB().then(()=>fbDb.ref(FB_PATH+'/'+id).on('value',snap=>cb(snap.val()))).catch(()=>{});
+}
+function fbUnlisten(id){
+  if(fbDb) fbDb.ref(FB_PATH+'/'+id).off();
+}
+
+// ── LOCAL STORE ──
+const COLORS=['c0','c1','c2','c3','c4','c5','c6','c7'];
+const DB='bet-comps-v2';
+function loadComps(){try{return JSON.parse(localStorage.getItem(DB)||'[]');}catch{return[];}}
+function saveComps(c){localStorage.setItem(DB,JSON.stringify(c));}
+
+// ── STATE ──
+let C=null;
+let isAdmin=false;
+let wiz={p1:null,p2:null,winner:null,pts:null,editMode:false,editIdx:-1};
+let setupPlayers=[], setupGpm=5;
+let viewUnlisten=null;
+
+// ── HELPERS ──
+function col(name){return COLORS[C.players.indexOf(name)%COLORS.length];}
+function av(name,sz){
+  sz=sz||28;
+  return`<span class="av ${col(name)}" style="width:${sz}px;height:${sz}px;font-size:${Math.round(sz*.38)}px">${name[0].toUpperCase()}</span>`;
+}
+function avOf(players,name,sz){
+  const cl=COLORS[players.indexOf(name)%COLORS.length];sz=sz||22;
+  return`<span class="av ${cl}" style="width:${sz}px;height:${sz}px;font-size:${Math.round(sz*.38)}px">${name[0].toUpperCase()}</span>`;
+}
+function esc(s){return s.replace(/\\/g,'\\\\').replace(/'/g,"\\'")}
+function getMatchups(pl){
+  const m=[];
+  for(let i=0;i<pl.length;i++) for(let j=i+1;j<pl.length;j++) m.push([pl[i],pl[j]]);
+  return m;
+}
+function remaining(p1,p2){return C.gpm-(C.results[p1+'__'+p2]||[]).length;}
+function totalPlayed(){return Object.values(C.results).reduce((s,g)=>s+g.length,0);}
+function totalGames(){return getMatchups(C.players).length*C.gpm;}
+function getStandings(){
+  const st={};
+  C.players.forEach(p=>{st[p]={pts:0,wins:0};});
+  getMatchups(C.players).forEach(([p1,p2])=>{
+    (C.results[p1+'__'+p2]||[]).forEach(g=>{st[g.w].pts+=g.p;st[g.w].wins++;});
+  });
+  return C.players.map(p=>({name:p,...st[p]})).sort((a,b)=>b.pts-a.pts||b.wins-a.wins);
+}
+function showToast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2500);
+}
+
+// ── SCREENS ──
+function show(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  window.scrollTo(0,0);
+}
+
+// ── HOME ──
+function goHome(){
+  if(C && viewUnlisten){fbUnlisten(C.id);viewUnlisten=null;}
+  C=null; isAdmin=false;
+  history.replaceState(null,'',location.pathname);
+  renderHome(); show('screen-home');
+}
+
+function renderHome(){
+  const comps=loadComps();
+  const el=document.getElementById('compsList');
+  if(!comps.length){
+    el.innerHTML=`<div class="empty-state"><div class="em">🏁</div><p>עדיין אין תחרויות<br>לחץ "תחרות חדשה" להתחיל</p></div>`;
+    return;
+  }
+  el.innerHTML=comps.slice().reverse().map(comp=>{
+    const ms=getMatchups(comp.players);
+    const played=Object.values(comp.results||{}).reduce((s,g)=>s+g.length,0);
+    const total=ms.length*comp.gpm;
+    const done=played===total&&total>0;
+    const avatars=comp.players.map(p=>avOf(comp.players,p,24)).join('');
+    return`<div class="comp-card" onclick="openComp('${comp.id}')">
+      <div class="comp-top">
+        <div class="comp-goal">${comp.goal||'ללא שם'}</div>
+        <span class="badge ${done?'badge-done':'badge-active'}">${done?'הסתיים':'פעיל'}</span>
+      </div>
+      <div class="comp-bottom">
+        <div class="comp-players">${avatars}</div>
+        <div class="comp-prog">${played}/${total} משחקים</div>
+      </div>
+      <div class="comp-actions">
+        <button class="btn-share-sm" onclick="shareCompId(event,'${comp.id}')">🔗 שתף</button>
+        <button class="btn-del-sm" onclick="deleteComp(event,'${comp.id}')">🗑️ מחק</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function openComp(id){
+  const comps=loadComps();
+  C=comps.find(c=>c.id===id);
+  if(!C)return;
+  isAdmin=true;
+  renderGame(); show('screen-playing');
+}
+
+function deleteComp(e,id){
+  e.stopPropagation();
+  if(!confirm('למחוק את התחרות?'))return;
+  saveComps(loadComps().filter(c=>c.id!==id));
+  renderHome();
+}
+
+function shareCompId(e,id){
+  e.stopPropagation();
+  const url=location.origin+location.pathname+'?join='+id;
+  if(navigator.clipboard){navigator.clipboard.writeText(url).then(()=>showToast('✓ הלינק הועתק!'));}
+  else{prompt('העתק את הלינק:',url);}
+}
+
+function shareComp(){
+  if(!C)return;
+  const url=location.origin+location.pathname+'?join='+C.id;
+  if(navigator.clipboard){navigator.clipboard.writeText(url).then(()=>showToast('✓ הלינק הועתק! שלח לחברים'));}
+  else{prompt('העתק את הלינק:',url);}
+}
+
+// ── VIEW MODE (shared link) ──
+function openSharedComp(id){
+  show('screen-playing');
+  document.getElementById('playGoal').textContent='טוען...';
+  document.getElementById('standingsBody').innerHTML='';
+  document.getElementById('matchupList').innerHTML='<div class="loader">⏳ טוען נתונים...</div>';
+
+  fbListen(id, data=>{
+    if(!data){
+      document.getElementById('playGoal').textContent='❌ תחרות לא נמצאה';
+      document.getElementById('matchupList').innerHTML='';
+      return;
+    }
+    C=data;
+    isAdmin=false;
+    renderGame();
+  });
+}
+
+// ── SETUP ──
+function goSetup(){
+  setupPlayers=[];setupGpm=5;
+  document.getElementById('goalInput').value='';
+  document.getElementById('playerInput').value='';
+  document.getElementById('gpmDisplay').textContent='5';
+  renderChips();updateSetupMeta();
+  show('screen-setup');
+}
+document.getElementById('addBtn').onclick=addPlayer;
+document.getElementById('playerInput').onkeydown=e=>{if(e.key==='Enter')addPlayer();};
+document.getElementById('gpmMinus').onclick=()=>{setupGpm=Math.max(1,setupGpm-1);document.getElementById('gpmDisplay').textContent=setupGpm;updateSetupMeta();};
+document.getElementById('gpmPlus').onclick=()=>{setupGpm=Math.min(20,setupGpm+1);document.getElementById('gpmDisplay').textContent=setupGpm;updateSetupMeta();};
+document.getElementById('startBtn').onclick=startComp;
+document.getElementById('goalInput').oninput=updateSetupMeta;
+function addPlayer(){
+  const inp=document.getElementById('playerInput');
+  const name=inp.value.trim();
+  if(name&&!setupPlayers.includes(name)){setupPlayers.push(name);inp.value='';renderChips();updateSetupMeta();}
+  inp.focus();
+}
+function removeSetupPlayer(name){setupPlayers=setupPlayers.filter(p=>p!==name);renderChips();updateSetupMeta();}
+function renderChips(){
+  document.getElementById('playerCount').textContent=setupPlayers.length;
+  document.getElementById('chips').innerHTML=setupPlayers.map((p,i)=>
+    `<span class="chip ${COLORS[i%COLORS.length]}">${p}<button onclick="removeSetupPlayer('${esc(p)}')">×</button></span>`
+  ).join('');
+}
+function updateSetupMeta(){
+  const goal=document.getElementById('goalInput').value.trim();
+  const ms=getMatchups(setupPlayers);
+  document.getElementById('countInfo').textContent=setupPlayers.length>=2
+    ?`${ms.length} עימותים × ${setupGpm} משחקים = ${ms.length*setupGpm} בסה"כ`:'';
+  const ok=setupPlayers.length>=2&&goal;
+  document.getElementById('startBtn').disabled=!ok;
+  const hint=document.getElementById('startHint');
+  hint.style.display=ok?'none':'';
+  hint.textContent=!goal?'חסר תיאור הימור':'צריך לפחות 2 שחקנים';
+}
+function startComp(){
+  const goal=document.getElementById('goalInput').value.trim();
+  const comp={id:Date.now().toString(),goal,players:[...setupPlayers],gpm:setupGpm,results:{},createdAt:Date.now()};
+  const comps=loadComps();comps.push(comp);saveComps(comps);
+  fbPush(comp);
+  C=comp; isAdmin=true;
+  renderGame(); show('screen-playing');
+}
+
+// ── GAME ──
+function saveC(){
+  if(!C)return;
+  const comps=loadComps();
+  const idx=comps.findIndex(c=>c.id===C.id);
+  if(idx>=0)comps[idx]=C;
+  saveComps(comps);
+  fbPush(C);
+}
+
+function renderGame(){
+  document.getElementById('playGoal').textContent='🎯 '+C.goal;
+  document.getElementById('playMeta').textContent=C.players.length+' שחקנים · '+C.gpm+' משחקים לכל עימות';
+  document.getElementById('viewBadge').style.display=isAdmin?'none':'block';
+  document.getElementById('openWizardBtn').style.display=isAdmin?'flex':'none';
+
+  const played=totalPlayed(),total=totalGames(),pct=total>0?Math.round(played/total*100):0;
+  document.getElementById('progText').textContent=played+' / '+total+' משחקים';
+  document.getElementById('progPct').textContent=pct+'%';
+  document.getElementById('progFill').style.width=pct+'%';
+
+  const st=getStandings();
+  document.getElementById('standingsBody').innerHTML=st.map((s,i)=>`
+    <tr class="${i===0&&s.pts>0?'tr-top':''}">
+      <td>${i===0&&s.pts>0?'👑':'<span style="color:#64748b;font-weight:700">'+(i+1)+'</span>'}</td>
+      <td>${av(s.name)} ${s.name}</td>
+      <td class="pts-td">${s.pts}</td>
+      <td class="wins-td">${s.wins}</td>
+    </tr>`).join('');
+
+  const allDone=played===total&&total>0;
+  const banner=document.getElementById('winnerBanner');
+  if(allDone){
+    banner.style.display='block';
+    document.getElementById('winnerText').textContent='הטורניר הסתיים!';
+    document.getElementById('winnerSub').textContent=st[0].name+' ניצח עם '+st[0].pts+' נקודות!';
+    if(isAdmin)document.getElementById('openWizardBtn').style.display='none';
+  }else{banner.style.display='none';}
+
+  const ms=getMatchups(C.players);
+  document.getElementById('matchupList').innerHTML=ms.map(([p1,p2])=>{
+    const games=C.results[p1+'__'+p2]||[];
+    const p1pts=games.filter(g=>g.w===p1).reduce((s,g)=>s+g.p,0);
+    const p2pts=games.filter(g=>g.w===p2).reduce((s,g)=>s+g.p,0);
+    const rem=C.gpm-games.length;
+    const done=rem===0;
+    const hist=games.map((g,idx)=>{
+      const lbl=g.p===1?'+1':g.p===2?'מרס':'מרס טורקי';
+      const clr=g.w===p1?'#a78bfa':'#34d399';
+      const editBtn=isAdmin?`<button onclick="editGame('${esc(p1)}','${esc(p2)}',${idx})" style="background:none;border:none;color:#64748b;cursor:pointer;font-size:12px;padding:0;line-height:1" title="ערוך">✏️</button><button onclick="deleteGame('${esc(p1)}','${esc(p2)}',${idx})" style="background:none;border:none;color:#64748b;cursor:pointer;font-size:12px;padding:0;line-height:1" title="מחק">🗑️</button>`:'';
+      return`<span style="display:inline-flex;align-items:center;gap:3px;background:rgba(255,255,255,.07);border-radius:8px;padding:3px 7px;font-size:11px;color:${clr}">${g.w} ${lbl}${editBtn}</span>`;
+    }).join('');
+    const quickBtn=isAdmin&&!done?`<button onclick="quickAdd('${esc(p1)}','${esc(p2)}')" style="width:100%;background:rgba(255,255,255,.06);border:1px dashed rgba(255,255,255,.2);border-radius:10px;color:#94a3b8;font-size:13px;font-weight:700;padding:8px;cursor:pointer;font-family:inherit;margin-top:2px">+ הזן תוצאה</button>`:'';
+    return`<div class="matchup-card">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+        <div class="mc-players">
+          ${av(p1,22)} ${p1}
+          <span class="mc-score-num" style="color:#a78bfa">${p1pts}</span>
+          <span style="color:#475569;font-weight:900">:</span>
+          <span class="mc-score-num" style="color:#34d399">${p2pts}</span>
+          ${av(p2,22)} ${p2}
+        </div>
+        <div class="${done?'mc-done':'mc-left'}">${done?'✓ הסתיים':'נשאר '+rem}</div>
+      </div>
+      ${games.length?`<div style="display:flex;flex-wrap:wrap;gap:4px">${hist}</div>`:''}
+      ${quickBtn}
+    </div>`;
+  }).join('');
+}
+
+// ── WIZARD ──
+function openWizard(){
+  wiz={p1:null,p2:null,winner:null,pts:null,editMode:false,editIdx:-1};
+  goWizS1(); document.getElementById('wizardOverlay').style.display='flex';
+}
+function quickAdd(p1,p2){
+  wiz={p1,p2,winner:null,pts:null,editMode:false,editIdx:-1};
+  selectMatchup(p1,p2);
+  document.getElementById('wizardOverlay').style.display='flex';
+}
+function deleteGame(p1,p2,idx){
+  if(!confirm('למחוק משחק זה?'))return;
+  const key=p1+'__'+p2;
+  C.results[key].splice(idx,1);
+  if(!C.results[key].length)delete C.results[key];
+  saveC(); renderGame();
+}
+document.getElementById('openWizardBtn').onclick=openWizard;
+
+function editGame(p1,p2,idx){
+  wiz={p1,p2,winner:null,pts:null,editMode:true,editIdx:idx};
+  selectMatchup(p1,p2);
+  document.getElementById('s2Title').textContent='✏️ עריכה: '+p1+' נגד '+p2;
+  const g=(C.results[p1+'__'+p2]||[])[idx];
+  if(g){selWinner(g.w===p1?0:1);selPts(g.p);}
+  document.getElementById('wizardOverlay').style.display='flex';
+}
+function closeWizard(){document.getElementById('wizardOverlay').style.display='none';}
+function overlayClick(e){if(e.target===document.getElementById('wizardOverlay'))closeWizard();}
+
+function goWizS1(){
+  document.getElementById('wiz-s1').style.display='block';
+  document.getElementById('wiz-s2').style.display='none';
+  wiz.winner=null;wiz.pts=null;
+  document.getElementById('matchupBtns').innerHTML=getMatchups(C.players).map(([p1,p2])=>{
+    const rem=remaining(p1,p2),done=rem===0;
+    return`<button class="mu-btn" ${done?'disabled':''} onclick="selectMatchup('${esc(p1)}','${esc(p2)}')">
+      <div class="mu-left">${av(p1,24)} ${p1} <span style="color:#64748b;font-size:12px">נגד</span> ${av(p2,24)} ${p2}</div>
+      <span class="rem-badge ${done?'rem-done':''}">${done?'✓ הסתיים':'נשאר '+rem}</span>
+    </button>`;
+  }).join('');
+}
+
+function selectMatchup(p1,p2){
+  wiz.p1=p1;wiz.p2=p2;wiz.winner=null;wiz.pts=null;
+  document.getElementById('wiz-s1').style.display='none';
+  document.getElementById('wiz-s2').style.display='block';
+  document.getElementById('s2Title').textContent=p1+' נגד '+p2;
+  document.getElementById('avP1').className='av-lg '+col(p1);
+  document.getElementById('avP1').textContent=p1[0].toUpperCase();
+  document.getElementById('nameP1').textContent=p1;
+  document.getElementById('avP2').className='av-lg '+col(p2);
+  document.getElementById('avP2').textContent=p2[0].toUpperCase();
+  document.getElementById('nameP2').textContent=p2;
+  document.getElementById('btnP1').classList.remove('sel');
+  document.getElementById('btnP2').classList.remove('sel');
+  [1,2,3].forEach(n=>document.getElementById('pts'+n).classList.remove('sel'));
+  document.getElementById('confirmBtn').disabled=true;
+}
+function selWinner(idx){
+  wiz.winner=idx===0?wiz.p1:wiz.p2;
+  document.getElementById('btnP1').classList.toggle('sel',idx===0);
+  document.getElementById('btnP2').classList.toggle('sel',idx===1);
+  chkConfirm();
+}
+function selPts(n){
+  wiz.pts=n;
+  [1,2,3].forEach(i=>document.getElementById('pts'+i).classList.toggle('sel',i===n));
+  chkConfirm();
+}
+function chkConfirm(){document.getElementById('confirmBtn').disabled=!(wiz.winner&&wiz.pts);}
+function confirmGame(){
+  const key=wiz.p1+'__'+wiz.p2;
+  if(!C.results[key])C.results[key]=[];
+  if(wiz.editMode){C.results[key][wiz.editIdx]={w:wiz.winner,p:wiz.pts};}
+  else{C.results[key].push({w:wiz.winner,p:wiz.pts});}
+  saveC(); closeWizard(); renderGame();
+}
+
+// ── INIT ──
+const joinId=new URLSearchParams(location.search).get('join');
+if(joinId){
+  show('screen-playing');
+  openSharedComp(joinId);
+}else{
+  renderHome(); show('screen-home');
+}
+</script>
+</body>
+</html>
