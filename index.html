@@ -240,7 +240,25 @@
       <small id="playMeta" style="color:#94a3b8;font-size:11px"></small>
     </div>
   </div>
-  <div id="viewBadge" class="view-badge" style="display:none">👁️ מצב צפייה — רק האדמין יכול לערוך</div>
+  <div id="viewBadge" class="view-badge" style="display:none;flex-direction:column;gap:8px">
+    <span>👁️ מצב צפייה — רק האדמין יכול לערוך</span>
+    <button onclick="openClaimAdmin()" style="background:rgba(168,85,247,.2);border:1px solid rgba(168,85,247,.4);border-radius:10px;color:#c4b5fd;font-size:12px;font-weight:700;padding:7px;cursor:pointer;font-family:inherit">🔑 אני האדמין — כנס עם PIN</button>
+  </div>
+
+  <!-- CLAIM ADMIN MODAL -->
+  <div id="claimAdminOverlay" class="overlay" style="display:none" onclick="if(event.target===this)closeClaimAdmin()">
+    <div class="modal">
+      <div class="modal-title">
+        <span>🔑 כניסה כאדמין</span>
+        <button class="btn-close" onclick="closeClaimAdmin()">×</button>
+      </div>
+      <p style="color:#94a3b8;font-size:13px;margin-bottom:16px;text-align:center">הכנס את ה-PIN שהגדרת כשיצרת את התחרות</p>
+      <input type="number" id="claimPinInput" placeholder="PIN — 4 ספרות" maxlength="4"
+        style="letter-spacing:6px;font-size:24px;font-weight:900;text-align:center;margin-bottom:8px"/>
+      <div id="claimPinError" style="color:#f87171;font-size:12px;text-align:center;min-height:18px;margin-bottom:8px"></div>
+      <button class="btn-confirm" onclick="verifyClaimAdmin()">כנס כאדמין</button>
+    </div>
+  </div>
   <div class="prog-wrap">
     <div class="prog-labels"><span id="progText"></span><span id="progPct"></span></div>
     <div class="prog-bar"><div class="prog-fill" id="progFill" style="width:0%"></div></div>
@@ -585,7 +603,7 @@ function saveC(){
 function renderGame(){
   document.getElementById('playGoal').textContent='🎯 '+C.goal;
   document.getElementById('playMeta').textContent=C.players.length+' שחקנים · '+C.gpm+' משחקים לכל עימות';
-  document.getElementById('viewBadge').style.display=isAdmin?'none':'block';
+  document.getElementById('viewBadge').style.display=isAdmin?'none':'flex';
   document.getElementById('openWizardBtn').style.display=isAdmin?'flex':'none';
 
   const played=totalPlayed(),total=totalGames(),pct=total>0?Math.round(played/total*100):0;
@@ -756,6 +774,51 @@ function confirmGame(){
   }
   saveC(); closeWizard(); renderGame();
 }
+// ── CLAIM ADMIN ──
+function openClaimAdmin(){
+  document.getElementById('claimPinInput').value='';
+  document.getElementById('claimPinError').textContent='';
+  document.getElementById('claimAdminOverlay').style.display='flex';
+  document.getElementById('claimPinInput').focus();
+}
+function closeClaimAdmin(){
+  document.getElementById('claimAdminOverlay').style.display='none';
+}
+async function verifyClaimAdmin(){
+  const pin=document.getElementById('claimPinInput').value;
+  if(!/^\d{4}$/.test(pin)){
+    document.getElementById('claimPinError').textContent='PIN חייב להיות 4 ספרות';
+    return;
+  }
+  if(C.adminPinHash){
+    // תחרות עם hash — בדוק מול המפתח השמור
+    const nameToHash=C.createdBy||getUser();
+    const h=await hashPin(nameToHash,pin);
+    if(h!==C.adminPinHash){
+      document.getElementById('claimPinError').textContent='❌ PIN שגוי';
+      return;
+    }
+    // תואם — שמור PIN מקומית ואפשר כניסה
+    localStorage.setItem(PIN_KEY,pin);
+    if(!localStorage.getItem(USER_KEY)&&C.createdBy) localStorage.setItem(USER_KEY,C.createdBy);
+  } else {
+    // תחרות ישנה ללא hash — כל PIN מקבל אדמין ומגדיר את ה-hash
+    C.createdBy=getUser();
+    C.adminPinHash=await hashPin(getUser(),pin);
+    localStorage.setItem(PIN_KEY,pin);
+  }
+  isAdmin=true;
+  const comps=loadComps();
+  const idx=comps.findIndex(c=>c.id===C.id);
+  const saved={...C,viewerMode:false};
+  if(idx>=0) comps[idx]=saved; else comps.push(saved);
+  saveComps(comps);
+  saveC();
+  closeClaimAdmin();
+  renderGame();
+  showToast('✅ כניסה כאדמין בוצעה!');
+}
+
 function clearPenalty(playerName){
   if(!C.penalties)return;
   C.penalties=C.penalties.filter(pen=>pen.player!==playerName);
