@@ -37,6 +37,15 @@
     .badge-done{background:rgba(148,163,184,.12);color:#94a3b8}
     .badge-viewer{background:rgba(99,102,241,.15);color:#a5b4fc}
 
+    /* USER SETUP */
+    .user-bar{display:flex;align-items:center;justify-content:space-between;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:8px 14px;margin-bottom:16px;font-size:13px}
+    .user-bar-name{font-weight:700;color:#e2e8f0}
+    .user-bar-edit{background:none;border:none;color:#64748b;cursor:pointer;font-size:12px;padding:0}
+    .user-bar-edit:hover{color:#fff}
+    .user-setup-modal{background:#1e1b4b;border-radius:20px;margin:20px;padding:28px 20px 24px;width:calc(100% - 40px);max-width:460px}
+    .user-setup-modal h2{font-size:20px;font-weight:900;margin-bottom:6px;text-align:center}
+    .user-setup-modal p{color:#94a3b8;font-size:13px;text-align:center;margin-bottom:20px}
+
     /* PENALTY */
     .penalty-banner{background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.35);border-radius:16px;padding:14px 16px;margin-bottom:14px}
     .penalty-banner-title{font-size:13px;font-weight:900;color:#fca5a5;margin-bottom:8px;display:flex;align-items:center;gap:6px}
@@ -161,12 +170,27 @@
 </head>
 <body>
 
+<!-- USER SETUP OVERLAY -->
+<div id="userSetupOverlay" class="overlay" style="display:none">
+  <div class="user-setup-modal">
+    <div style="font-size:46px;text-align:center;margin-bottom:12px">👤</div>
+    <h2>מה השם שלך?</h2>
+    <p>השם ישמש לזיהוי שלך כאדמין בתחרויות שתיצור</p>
+    <input type="text" id="userNameInput" placeholder="הכנס שם..."/>
+    <button class="btn-start" id="saveUserBtn" onclick="saveUser()" disabled style="margin-top:12px">בואו נתחיל 🚀</button>
+  </div>
+</div>
+
 <!-- HOME -->
 <div id="screen-home" class="screen">
   <div class="home-logo">
     <div class="em">🎯</div>
     <h1>התערבות בין חברים</h1>
     <p>בחר תחרות או צור חדשה</p>
+  </div>
+  <div class="user-bar">
+    <span>👤 <span class="user-bar-name" id="userBarName"></span></span>
+    <button class="user-bar-edit" onclick="changeUser()">שנה שם ✏️</button>
   </div>
   <button class="btn-new" onclick="goSetup()">＋ תחרות חדשה</button>
   <div class="section-title">תחרויות שמורות</div>
@@ -397,6 +421,7 @@ function goHome(){
 }
 
 function renderHome(){
+  document.getElementById('userBarName').textContent=getUser();
   const comps=loadComps();
   const el=document.getElementById('compsList');
   if(!comps.length){
@@ -474,11 +499,12 @@ function openSharedComp(id){
       return;
     }
     C=data;
-    isAdmin=false;
-    // שמור תחרות שמורה אצל הצופה
+    // בדוק אם המשתמש הוא היוצר לפי שם
+    isAdmin = data.createdBy && data.createdBy === getUser();
+    // שמור אצל המשתמש (אדמין או צופה)
     const comps=loadComps();
     const idx=comps.findIndex(c=>c.id===id);
-    const saved={...data, viewerMode:true};
+    const saved={...data, viewerMode:!isAdmin};
     if(idx>=0) comps[idx]=saved; else comps.push(saved);
     saveComps(comps);
     renderGame();
@@ -526,7 +552,7 @@ function updateSetupMeta(){
 }
 function startComp(){
   const goal=document.getElementById('goalInput').value.trim();
-  const comp={id:Date.now().toString(),goal,players:[...setupPlayers],gpm:setupGpm,results:{},penalties:[],createdAt:Date.now()};
+  const comp={id:Date.now().toString(),goal,players:[...setupPlayers],gpm:setupGpm,results:{},penalties:[],createdBy:getUser(),createdAt:Date.now()};
   const comps=loadComps();comps.push(comp);saveComps(comps);
   fbPush(comp);
   C=comp; isAdmin=true;
@@ -724,14 +750,42 @@ function clearPenalty(playerName){
   showToast('✅ '+playerName+' התנצל — חוזר למשחק!');
 }
 
+// ── USER IDENTITY ──
+const USER_KEY='bet-user';
+function getUser(){return localStorage.getItem(USER_KEY)||'';}
+function initUser(cb){
+  if(getUser()){cb();return;}
+  document.getElementById('userSetupOverlay').style.display='flex';
+  const inp=document.getElementById('userNameInput');
+  document.getElementById('saveUserBtn').disabled=true;
+  inp.oninput=()=>document.getElementById('saveUserBtn').disabled=!inp.value.trim();
+  inp.onkeydown=e=>{if(e.key==='Enter'&&inp.value.trim())saveUser(cb);};
+  inp.focus();
+}
+function saveUser(cb){
+  const name=document.getElementById('userNameInput').value.trim();
+  if(!name)return;
+  localStorage.setItem(USER_KEY,name);
+  document.getElementById('userSetupOverlay').style.display='none';
+  if(typeof cb==='function')cb(); else{renderHome();show('screen-home');}
+}
+function changeUser(){
+  document.getElementById('userNameInput').value=getUser();
+  document.getElementById('saveUserBtn').disabled=false;
+  document.getElementById('userSetupOverlay').style.display='flex';
+  document.getElementById('userNameInput').focus();
+}
+
 // ── INIT ──
 const joinId=new URLSearchParams(location.search).get('join');
-if(joinId){
-  show('screen-playing');
-  openSharedComp(joinId);
-}else{
-  renderHome(); show('screen-home');
-}
+initUser(()=>{
+  if(joinId){
+    show('screen-playing');
+    openSharedComp(joinId);
+  }else{
+    renderHome(); show('screen-home');
+  }
+});
 </script>
 </body>
 </html>
