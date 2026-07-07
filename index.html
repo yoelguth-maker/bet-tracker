@@ -174,10 +174,13 @@
 <div id="userSetupOverlay" class="overlay" style="display:none">
   <div class="user-setup-modal">
     <div style="font-size:46px;text-align:center;margin-bottom:12px">👤</div>
-    <h2>מה השם שלך?</h2>
-    <p>השם ישמש לזיהוי שלך כאדמין בתחרויות שתיצור</p>
-    <input type="text" id="userNameInput" placeholder="הכנס שם..."/>
-    <button class="btn-start" id="saveUserBtn" onclick="saveUser()" disabled style="margin-top:12px">בואו נתחיל 🚀</button>
+    <h2>הגדר פרופיל</h2>
+    <p>השם + ה-PIN ישמשו לזיהוי שלך כאדמין בכל מכשיר</p>
+    <input type="text" id="userNameInput" placeholder="שם..." autocomplete="off" style="margin-bottom:10px"/>
+    <input type="number" id="userPinInput" placeholder="PIN — 4 ספרות" maxlength="4" autocomplete="off"
+      style="letter-spacing:6px;font-size:20px;font-weight:900;text-align:center"/>
+    <div id="pinError" style="color:#f87171;font-size:12px;text-align:center;margin-top:6px;min-height:16px"></div>
+    <button class="btn-start" id="saveUserBtn" disabled style="margin-top:8px">בואו נתחיל 🚀</button>
   </div>
 </div>
 
@@ -492,16 +495,25 @@ function openSharedComp(id){
   document.getElementById('standingsBody').innerHTML='';
   document.getElementById('matchupList').innerHTML='<div class="loader">⏳ טוען נתונים...</div>';
 
-  fbListen(id, data=>{
+  fbListen(id, async data=>{
     if(!data){
       document.getElementById('playGoal').textContent='❌ תחרות לא נמצאה';
       document.getElementById('matchupList').innerHTML='';
       return;
     }
     C=data;
-    // בדוק אם המשתמש הוא היוצר לפי שם
-    isAdmin = data.createdBy && data.createdBy === getUser();
-    // שמור אצל המשתמש (אדמין או צופה)
+    // בדוק אם המשתמש הוא היוצר — שם + PIN hash
+    if(data.createdBy && data.createdBy===getUser()){
+      if(data.adminPinHash){
+        const myHash=await hashPin(getUser(),getPin());
+        isAdmin=(myHash===data.adminPinHash);
+      } else {
+        isAdmin=true; // תחרות ישנה ללא hash — שם מספיק
+      }
+    } else {
+      isAdmin=false;
+    }
+    // שמור אצל המשתמש
     const comps=loadComps();
     const idx=comps.findIndex(c=>c.id===id);
     const saved={...data, viewerMode:!isAdmin};
@@ -550,9 +562,10 @@ function updateSetupMeta(){
   hint.style.display=ok?'none':'';
   hint.textContent=!goal?'חסר תיאור הימור':'צריך לפחות 2 שחקנים';
 }
-function startComp(){
+async function startComp(){
   const goal=document.getElementById('goalInput').value.trim();
-  const comp={id:Date.now().toString(),goal,players:[...setupPlayers],gpm:setupGpm,results:{},penalties:[],createdBy:getUser(),createdAt:Date.now()};
+  const adminPinHash=await hashPin(getUser(),getPin());
+  const comp={id:Date.now().toString(),goal,players:[...setupPlayers],gpm:setupGpm,results:{},penalties:[],createdBy:getUser(),adminPinHash,createdAt:Date.now()};
   const comps=loadComps();comps.push(comp);saveComps(comps);
   fbPush(comp);
   C=comp; isAdmin=true;
@@ -752,29 +765,59 @@ function clearPenalty(playerName){
 
 // ── USER IDENTITY ──
 const USER_KEY='bet-user';
+const PIN_KEY='bet-pin';
 function getUser(){return localStorage.getItem(USER_KEY)||'';}
-function initUser(cb){
-  if(getUser()){cb();return;}
-  document.getElementById('userSetupOverlay').style.display='flex';
-  const inp=document.getElementById('userNameInput');
-  document.getElementById('saveUserBtn').disabled=true;
-  inp.oninput=()=>document.getElementById('saveUserBtn').disabled=!inp.value.trim();
-  inp.onkeydown=e=>{if(e.key==='Enter'&&inp.value.trim())saveUser(cb);};
-  inp.focus();
+function getPin(){return localStorage.getItem(PIN_KEY)||'';}
+
+async function hashPin(name,pin){
+  const data=new TextEncoder().encode(name+':'+pin);
+  const buf=await crypto.subtle.digest('SHA-256',data);
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
 }
-function saveUser(cb){
+
+function updateSaveBtn(){
   const name=document.getElementById('userNameInput').value.trim();
-  if(!name)return;
+  const pin=document.getElementById('userPinInput').value;
+  document.getElementById('saveUserBtn').disabled=!name||!/^\d{4}$/.test(pin);
+}
+
+function showUserSetup(cb){
+  document.getElementById('userSetupOverlay').style.display='flex';
+  document.getElementById('pinError').textContent='';
+  const nameInp=document.getElementById('userNameInput');
+  const pinInp=document.getElementById('userPinInput');
+  nameInp.value=getUser(); pinInp.value='';
+  updateSaveBtn();
+  nameInp.oninput=pinInp.oninput=updateSaveBtn;
+  pinInp.oninput=()=>{
+    // הגבל ל-4 ספרות
+    if(pinInp.value.length>4) pinInp.value=pinInp.value.slice(0,4);
+    updateSaveBtn();
+  };
+  const onEnter=e=>{if(e.key==='Enter')trySaveUser(cb);};
+  nameInp.onkeydown=pinInp.onkeydown=onEnter;
+  document.getElementById('saveUserBtn').onclick=()=>trySaveUser(cb);
+  nameInp.focus();
+}
+
+function trySaveUser(cb){
+  const name=document.getElementById('userNameInput').value.trim();
+  const pin=document.getElementById('userPinInput').value;
+  if(!name||!/^\d{4}$/.test(pin)){
+    document.getElementById('pinError').textContent='PIN חייב להיות בדיוק 4 ספרות';
+    return;
+  }
   localStorage.setItem(USER_KEY,name);
+  localStorage.setItem(PIN_KEY,pin);
   document.getElementById('userSetupOverlay').style.display='none';
   if(typeof cb==='function')cb(); else{renderHome();show('screen-home');}
 }
-function changeUser(){
-  document.getElementById('userNameInput').value=getUser();
-  document.getElementById('saveUserBtn').disabled=false;
-  document.getElementById('userSetupOverlay').style.display='flex';
-  document.getElementById('userNameInput').focus();
+
+function initUser(cb){
+  if(getUser()&&getPin()){cb();return;}
+  showUserSetup(cb);
 }
+function changeUser(){showUserSetup(null);}
 
 // ── INIT ──
 const joinId=new URLSearchParams(location.search).get('join');
